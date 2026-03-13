@@ -30,10 +30,16 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  // 利用可能な代理店リストを取得
+  // 利用可能な代理店リストを取得（キャンペーン数の多い順）
   const availableAgencies = useMemo(() => {
-    const agencies = new Set(campaigns.map((c) => c.AGENCY_NAME));
-    return Array.from(agencies).sort();
+    const agencyCounts = campaigns.reduce((acc, campaign) => {
+      acc[campaign.AGENCY_NAME] = (acc[campaign.AGENCY_NAME] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(agencyCounts)
+      .sort((a, b) => b[1] - a[1]) // 件数の多い順
+      .map(([agency]) => agency);
   }, [campaigns]);
 
   // フィルタリングとソートを適用
@@ -87,7 +93,8 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
   };
 
   const formatNumber = (num: number): string => {
-    return num.toLocaleString('ja-JP');
+    // 数値をそのまま表示（カンマ区切りなし）
+    return String(num);
   };
 
   const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
@@ -137,9 +144,13 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">
+                  優先度
+                </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('name')}
+                  style={{ minWidth: '200px', maxWidth: '300px' }}
                 >
                   <div className="flex items-center gap-1">
                     キャンペーン名
@@ -147,33 +158,35 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('agency')}
+                  style={{ minWidth: '120px' }}
                 >
                   <div className="flex items-center gap-1">
                     代理店
                     <SortIcon field="agency" />
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '100px' }}>
                   広告種別
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '180px' }}>
                   ステータス
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('progressRate')}
+                  style={{ minWidth: '80px' }}
                 >
                   <div className="flex items-center gap-1">
                     進捗率
                     <SortIcon field="progressRate" />
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '100px' }}>
                   当日Imp
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '100px' }}>
                   累積Imp
                 </th>
               </tr>
@@ -181,7 +194,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAndSortedCampaigns.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     該当するキャンペーンがありません
                   </td>
                 </tr>
@@ -192,28 +205,37 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
                     onClick={() => onCampaignClick(campaign)}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{campaign.CAMPAIGN_NAME}</div>
-                      <div className="text-xs text-gray-500">{campaign.ADVERTISER_NAME}</div>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {campaign.priority}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {campaign.AGENCY_NAME}
+                    <td className="px-4 py-4" style={{ maxWidth: '300px' }}>
+                      <div className="text-sm font-medium text-gray-900 truncate" title={campaign.CAMPAIGN_NAME}>
+                        {campaign.CAMPAIGN_NAME}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate" title={campaign.ADVERTISER_NAME}>
+                        {campaign.ADVERTISER_NAME}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <div className="truncate" title={campaign.AGENCY_NAME}>
+                        {campaign.AGENCY_NAME}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         {campaign.adType.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={campaign.status} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {campaign.progressRate.toFixed(1)}%
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatNumber(campaign.todayImp)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatNumber(campaign.cumulativeImp)}
                     </td>
                   </tr>

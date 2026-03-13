@@ -51,14 +51,27 @@ export class StatusEvaluator {
    * キャンペーンのステータスを判定します
    * 
    * 判定順序（Requirement 3.6, 4.3）:
-   * 1. 要対応条件を上から順に評価（3.1→3.2→3.3→3.4→3.5）
-   * 2. 次に注意条件を評価（4.1→4.2）
-   * 3. どれにも該当しない → 順調
+   * 1. 自社広告と運用型は常に「対象外」を返す
+   * 2. 予約型のみ要対応条件を上から順に評価（3.1→3.2→3.3→3.4→3.5）
+   * 3. 次に注意条件を評価（4.1→4.2）
+   * 4. どれにも該当しない → 順調
    * 
    * @param campaign - キャンペーンデータ
    * @returns キャンペーンステータス
    */
   evaluateStatus(campaign: CampaignData): CampaignStatus {
+    // 広告種別を判定
+    const adType = this.evaluateAdType(campaign.ORDER_NAME);
+    
+    // 自社広告と運用型はステータス判定対象外
+    if (adType.type === 'HOUSE' || adType.type === 'PROGRAMMATIC') {
+      return {
+        type: 'NOT_APPLICABLE',
+        label: '-',
+        color: 'gray',
+        icon: '',
+      };
+    }
     // 残り日数と残り必要impを計算
     const remainingDays = this.calculateRemainingDays(campaign.END_TIME);
     const remainingImp = this.calculateRemainingImp(campaign.targetImp, campaign.cumulativeImp);

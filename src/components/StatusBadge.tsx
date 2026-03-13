@@ -21,6 +21,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     red: 'bg-red-100 text-red-800 border-red-300',
     yellow: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     green: 'bg-green-100 text-green-800 border-green-300',
+    gray: 'bg-gray-100 text-gray-600 border-gray-300',
   };
 
   return (
@@ -29,7 +30,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
         colorClasses[status.color]
       } ${className}`}
     >
-      <span className="mr-1">{status.icon}</span>
+      {status.icon && <span className="mr-1">{status.icon}</span>}
       {status.label}
     </span>
   );

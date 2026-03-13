@@ -48,6 +48,9 @@ export interface CampaignData {
  * 
  * 順調（HEALTHY）:
  * - HEALTHY: 順調
+ * 
+ * 対象外（NOT_APPLICABLE）:
+ * - NOT_APPLICABLE: ステータス判定対象外（自社広告・運用型）
  */
 export type CampaignStatusType =
   | 'CRITICAL_BEHIND_80'
@@ -57,7 +60,8 @@ export type CampaignStatusType =
   | 'CRITICAL_ZERO_IMP'
   | 'WARNING_ENDING_SOON'
   | 'WARNING_EARLY_COMPLETE'
-  | 'HEALTHY';
+  | 'HEALTHY'
+  | 'NOT_APPLICABLE';
 
 /**
  * キャンペーンステータス情報
@@ -65,7 +69,7 @@ export type CampaignStatusType =
 export interface CampaignStatus {
   type: CampaignStatusType;
   label: string;
-  color: 'red' | 'yellow' | 'green';
+  color: 'red' | 'yellow' | 'green' | 'gray';
   icon: string;
 }
 

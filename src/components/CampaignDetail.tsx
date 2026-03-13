@@ -23,7 +23,8 @@ interface CampaignDetailProps {
 
 export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack }) => {
   const formatNumber = (num: number): string => {
-    return num.toLocaleString('ja-JP');
+    // 数値をそのまま表示（カンマ区切りなし）
+    return String(num);
   };
 
   const formatDate = (dateStr: string): string => {
@@ -154,10 +155,12 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm text-gray-600 font-medium">全体時間</div>
             <div className="text-lg font-semibold text-gray-900 mt-1">{campaign.totalHours} 時間</div>
+            <div className="text-xs text-gray-500 mt-1">配信開始から終了までの総時間</div>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm text-gray-600 font-medium">経過時間</div>
             <div className="text-lg font-semibold text-gray-900 mt-1">{campaign.elapsedHours} 時間</div>
+            <div className="text-xs text-gray-500 mt-1">配信開始から現在までの経過時間</div>
           </div>
         </div>
       </div>
