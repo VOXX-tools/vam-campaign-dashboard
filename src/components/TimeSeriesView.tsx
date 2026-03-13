@@ -26,6 +26,10 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
   const [viewMode, setViewMode] = useState<ViewMode>('comparison');
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7日前
+    end: new Date().toISOString().split('T')[0], // 今日
+  });
 
   const storageManagerRef = React.useRef<FirestoreManager>(new FirestoreManager());
 
@@ -70,22 +74,31 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
     }, {} as Record<string, { totalImp: number; todayImp: number; cumulativeImp: number; count: number }>);
   }, [campaigns]);
 
-  // 時系列データをグラフ用に変換
+  // 時系列データをグラフ用に変換（日付範囲フィルター適用）
   const chartData = useMemo(() => {
     if (timeSeriesData.length === 0) return [];
 
-    return timeSeriesData.map((point) => {
-      const date = new Date(point.timestamp);
-      return {
-        time: `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`,
-        timestamp: point.timestamp.getTime(),
-        予約型: point.reservedImp,
-        運用型: point.programmaticImp,
-        自社広告: point.houseImp,
-        全体: point.totalImp,
-      };
-    });
-  }, [timeSeriesData]);
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    endDate.setHours(23, 59, 59, 999); // 終了日の最後まで含める
+
+    return timeSeriesData
+      .filter((point) => {
+        const pointDate = new Date(point.timestamp);
+        return pointDate >= startDate && pointDate <= endDate;
+      })
+      .map((point) => {
+        const date = new Date(point.timestamp);
+        return {
+          time: `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`,
+          timestamp: point.timestamp.getTime(),
+          予約型: point.reservedImp,
+          運用型: point.programmaticImp,
+          自社広告: point.houseImp,
+          全体: point.totalImp,
+        };
+      });
+  }, [timeSeriesData, dateRange]);
 
   // 表示するラインを決定
   const getVisibleLines = () => {
@@ -119,6 +132,69 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
 
   return (
     <div className="space-y-6">
+      {/* 日付範囲フィルター */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">期間:</label>
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-500">〜</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const end = new Date();
+                const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+                setDateRange({
+                  start: start.toISOString().split('T')[0],
+                  end: end.toISOString().split('T')[0],
+                });
+              }}
+              className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              過去7日
+            </button>
+            <button
+              onClick={() => {
+                const end = new Date();
+                const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+                setDateRange({
+                  start: start.toISOString().split('T')[0],
+                  end: end.toISOString().split('T')[0],
+                });
+              }}
+              className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              過去30日
+            </button>
+            <button
+              onClick={() => {
+                const end = new Date();
+                const start = new Date(end.getTime() - 60 * 24 * 60 * 60 * 1000);
+                setDateRange({
+                  start: start.toISOString().split('T')[0],
+                  end: end.toISOString().split('T')[0],
+                });
+              }}
+              className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              過去60日
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 広告種別タブ */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-wrap gap-2">
@@ -172,7 +248,7 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
       {/* グラフ */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          時系列Imp推移（過去90日間）
+          時系列Imp推移（{dateRange.start} 〜 {dateRange.end}）
         </h3>
         {isLoading ? (
           <div className="h-96 flex items-center justify-center">
@@ -202,7 +278,7 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
           <>
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
               <p className="text-sm text-blue-800">
-                📊 {timeSeriesData.length}件のデータポイントを表示中（最大90日間保存）
+                📊 {chartData.length}件のデータポイントを表示中（全{timeSeriesData.length}件、最大60日間保存）
               </p>
             </div>
             <ResponsiveContainer width="100%" height={400}>

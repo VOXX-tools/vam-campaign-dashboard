@@ -8,9 +8,10 @@
  * - 営業チームと技術チームが次の対応に繋げやすくする
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { EnrichedCampaign } from '../types';
+import { FirestoreManager } from '../modules/FirestoreManager';
+import type { EnrichedCampaign, TimeSeriesDataPoint } from '../types';
 
 interface PriorityViewProps {
   campaigns: EnrichedCampaign[];
@@ -23,6 +24,31 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
   const [selectedPriority, setSelectedPriority] = useState<number | null>(null);
   const [analysisType, setAnalysisType] = useState<AnalysisType>('hourly');
   const [chartType, setChartType] = useState<ChartType>('line');
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0],
+  });
+
+  const storageManagerRef = React.useRef<FirestoreManager>(new FirestoreManager());
+
+  // Firestoreから時系列データを読み込み
+  useEffect(() => {
+    const loadTimeSeriesData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await storageManagerRef.current.loadTimeSeries();
+        setTimeSeriesData(data);
+      } catch (error) {
+        console.error('Failed to load time series data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTimeSeriesData();
+  }, []);
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString('ja-JP');
@@ -70,54 +96,110 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
     5: '#ec4899', // ピンク
   };
 
-  // 時間帯別データ（0-23時）
+  // 時間帯別データ（0-23時）- 実際の時系列データから集計
   const hourlyData = useMemo(() => {
-    const data = [];
-    
-    for (let hour = 0; hour < 24; hour++) {
-      // 時間帯による配信傾向をシミュレート
-      let factor = 1.0;
-      if (hour >= 0 && hour < 6) factor = 0.3;
-      else if (hour >= 9 && hour < 17) factor = 1.5;
-      else if (hour >= 18 && hour < 24) factor = 1.2;
-      else factor = 0.8;
+    if (timeSeriesData.length === 0) {
+      // データがない場合は空配列を返す
+      return [];
+    }
 
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    endDate.setHours(23, 59, 59, 999);
+
+    // 時間帯別に集計（0-23時）
+    const hourlyMap: Record<number, Record<number, number>> = {};
+    
+    // 初期化
+    for (let hour = 0; hour < 24; hour++) {
+      hourlyMap[hour] = {};
+      prioritySummary.forEach((item) => {
+        hourlyMap[hour][item.priority] = 0;
+      });
+    }
+
+    // 時系列データから時間帯別に集計
+    timeSeriesData
+      .filter((point) => {
+        const pointDate = new Date(point.timestamp);
+        return pointDate >= startDate && pointDate <= endDate;
+      })
+      .forEach((point) => {
+        const hour = new Date(point.timestamp).getHours();
+        // 各優先度のimpを推定（全体impから優先度別に按分）
+        const totalTodayImp = prioritySummary.reduce((sum, item) => sum + item.todayImp, 0);
+        prioritySummary.forEach((item) => {
+          const ratio = totalTodayImp > 0 ? item.todayImp / totalTodayImp : 0;
+          hourlyMap[hour][item.priority] += point.totalImp * ratio;
+        });
+      });
+
+    // グラフ用データに変換
+    const data = [];
+    for (let hour = 0; hour < 24; hour++) {
       const dataPoint: any = {
         time: `${hour}:00`,
       };
-
       prioritySummary.forEach((item) => {
-        const impValue = (item.todayImp * factor) / 24;
-        dataPoint[`優先度${item.priority}`] = Math.round(impValue);
+        dataPoint[`優先度${item.priority}`] = Math.round(hourlyMap[hour][item.priority]);
       });
-
       data.push(dataPoint);
     }
     return data;
-  }, [prioritySummary]);
+  }, [timeSeriesData, dateRange, prioritySummary]);
 
-  // 曜日別データ
+  // 曜日別データ - 実際の時系列データから集計
   const dailyData = useMemo(() => {
-    const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
-    const data = [];
-    
-    for (let day = 0; day < 7; day++) {
-      // 曜日による配信傾向をシミュレート
-      const factor = day < 5 ? 1.2 : 0.7;
+    if (timeSeriesData.length === 0) {
+      return [];
+    }
 
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    endDate.setHours(23, 59, 59, 999);
+
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    
+    // 曜日別に集計（0=日曜, 6=土曜）
+    const dailyMap: Record<number, Record<number, number>> = {};
+    
+    // 初期化
+    for (let day = 0; day < 7; day++) {
+      dailyMap[day] = {};
+      prioritySummary.forEach((item) => {
+        dailyMap[day][item.priority] = 0;
+      });
+    }
+
+    // 時系列データから曜日別に集計
+    timeSeriesData
+      .filter((point) => {
+        const pointDate = new Date(point.timestamp);
+        return pointDate >= startDate && pointDate <= endDate;
+      })
+      .forEach((point) => {
+        const day = new Date(point.timestamp).getDay();
+        // 各優先度のimpを推定（全体impから優先度別に按分）
+        const totalTodayImp = prioritySummary.reduce((sum, item) => sum + item.todayImp, 0);
+        prioritySummary.forEach((item) => {
+          const ratio = totalTodayImp > 0 ? item.todayImp / totalTodayImp : 0;
+          dailyMap[day][item.priority] += point.totalImp * ratio;
+        });
+      });
+
+    // グラフ用データに変換
+    const data = [];
+    for (let day = 0; day < 7; day++) {
       const dataPoint: any = {
         time: weekdays[day],
       };
-
       prioritySummary.forEach((item) => {
-        const impValue = item.todayImp * factor;
-        dataPoint[`優先度${item.priority}`] = Math.round(impValue);
+        dataPoint[`優先度${item.priority}`] = Math.round(dailyMap[day][item.priority]);
       });
-
       data.push(dataPoint);
     }
     return data;
-  }, [prioritySummary]);
+  }, [timeSeriesData, dateRange, prioritySummary]);
 
   const chartData = analysisType === 'hourly' ? hourlyData : dailyData;
 
@@ -127,6 +209,56 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
 
   return (
     <div className="space-y-6">
+      {/* 日付範囲フィルター */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">期間:</label>
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-500">〜</span>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const end = new Date();
+                const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+                setDateRange({
+                  start: start.toISOString().split('T')[0],
+                  end: end.toISOString().split('T')[0],
+                });
+              }}
+              className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              過去7日
+            </button>
+            <button
+              onClick={() => {
+                const end = new Date();
+                const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+                setDateRange({
+                  start: start.toISOString().split('T')[0],
+                  end: end.toISOString().split('T')[0],
+                });
+              }}
+              className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            >
+              過去30日
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 分析タイプとグラフタイプの切り替え */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -208,20 +340,44 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
       {/* グラフ */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          優先度別 {analysisType === 'hourly' ? '時間帯別' : '曜日別'} Imp推移
+          優先度別 {analysisType === 'hourly' ? '時間帯別' : '曜日別'} Imp推移（{dateRange.start} 〜 {dateRange.end}）
         </h3>
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-800">
-            ℹ️ このグラフは当日impデータを基に推定した傾向を表示しています。
-            実際の時系列データを蓄積することで、より正確な分析が可能になります。
-          </p>
-        </div>
-        {chartData.length === 0 ? (
+        {isLoading ? (
+          <div className="h-96 flex items-center justify-center">
+            <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          </div>
+        ) : timeSeriesData.length === 0 ? (
+          <div className="h-96 flex flex-col items-center justify-center text-gray-500">
+            <svg className="h-16 w-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            <p>時系列データがまだ蓄積されていません</p>
+            <p className="text-sm mt-2">データは毎時5分に自動的に保存されます</p>
+          </div>
+        ) : chartData.length === 0 ? (
           <div className="h-96 flex items-center justify-center text-gray-500">
-            データがありません
+            選択した期間にデータがありません
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={400}>
+          <>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                📊 実際の時系列データから集計（全{timeSeriesData.length}件、最大60日間保存）
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={400}>
             {chartType === 'line' ? (
               <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -259,6 +415,7 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
               </BarChart>
             )}
           </ResponsiveContainer>
+          </>
         )}
       </div>
 

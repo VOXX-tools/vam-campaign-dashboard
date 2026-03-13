@@ -28,7 +28,7 @@ import type { StorageData, TimeSeriesDataPoint } from '../types';
 
 const COLLECTION_CAMPAIGNS = 'campaigns';
 const COLLECTION_TIMESERIES = 'timeseries';
-const DATA_RETENTION_DAYS = 90; // 約3ヶ月分のデータを保存
+const DATA_RETENTION_DAYS = 60; // 2ヶ月分のデータを保存（コスト最適化）
 
 export class FirestoreManager {
   private db: Firestore;
@@ -130,7 +130,7 @@ export class FirestoreManager {
       const q = query(
         collection(this.db, COLLECTION_TIMESERIES),
         orderBy('timestamp', 'desc'),
-        limit(2160) // 90日 × 24時間 = 2160データポイント
+        limit(1440) // 60日 × 24時間 = 1440データポイント
       );
 
       const querySnapshot = await getDocs(q);
@@ -156,7 +156,7 @@ export class FirestoreManager {
   }
 
   /**
-   * 90日以上前のデータを削除
+   * 60日以上前のデータを削除
    * Requirements: 12.2, 12.3
    */
   async cleanup(): Promise<void> {
