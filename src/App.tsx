@@ -1,5 +1,7 @@
 import { GoogleAuthProvider, useGoogleAuth } from './context/GoogleAuthContext';
+import { AppContextProvider } from './context/AppContext';
 import { LoginButton } from './components/LoginButton';
+import { Dashboard } from './components/Dashboard';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useGoogleAuth();
@@ -35,9 +37,7 @@ function AppContent() {
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-gray-600">ダッシュボードの実装は今後のタスクで行います。</p>
-        </div>
+        <Dashboard />
       </main>
     </div>
   );
@@ -46,7 +46,9 @@ function AppContent() {
 function App() {
   return (
     <GoogleAuthProvider>
-      <AppContent />
+      <AppContextProvider>
+        <AppContent />
+      </AppContextProvider>
     </GoogleAuthProvider>
   );
 }
