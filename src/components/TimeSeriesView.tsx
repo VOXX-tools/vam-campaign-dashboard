@@ -7,24 +7,44 @@
  * 機能:
  * - Rechartsを使用してグラフを描画
  * - タブ切り替え（全体/予約型/運用型/自社広告）
- * - 時間帯別・曜日別の分析
+ * - Firestoreから時系列データを読み込み
  * - 分析サマリーを表示
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { EnrichedCampaign } from '../types';
+import { FirestoreManager } from '../modules/FirestoreManager';
+import type { EnrichedCampaign, TimeSeriesDataPoint } from '../types';
 
 interface TimeSeriesViewProps {
   campaigns: EnrichedCampaign[];
 }
 
 type ViewMode = 'total' | 'reserved' | 'programmatic' | 'house' | 'comparison';
-type AnalysisType = 'hourly' | 'daily';
 
 export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('comparison');
-  const [analysisType, setAnalysisType] = useState<AnalysisType>('hourly');
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const storageManagerRef = React.useRef<FirestoreManager>(new FirestoreManager());
+
+  // Firestoreから時系列データを読み込み
+  useEffect(() => {
+    const loadTimeSeriesData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await storageManagerRef.current.loadTimeSeries();
+        setTimeSeriesData(data);
+      } catch (error) {
+        console.error('Failed to load time series data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTimeSeriesData();
+  }, []);
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString('ja-JP');
@@ -50,62 +70,22 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
     }, {} as Record<string, { totalImp: number; todayImp: number; cumulativeImp: number; count: number }>);
   }, [campaigns]);
 
-  // 時間帯別データ（0-23時）のシミュレーション
-  // 実際のデータがないため、現在のimpデータを時間帯に分散
-  const hourlyData = useMemo(() => {
-    const data = [];
-    
-    for (let hour = 0; hour < 24; hour++) {
-      // 時間帯による配信傾向をシミュレート
-      // 深夜（0-6時）: 低め、日中（9-17時）: 高め、夜（18-23時）: 中程度
-      let factor = 1.0;
-      if (hour >= 0 && hour < 6) factor = 0.3;
-      else if (hour >= 9 && hour < 17) factor = 1.5;
-      else if (hour >= 18 && hour < 24) factor = 1.2;
-      else factor = 0.8;
+  // 時系列データをグラフ用に変換
+  const chartData = useMemo(() => {
+    if (timeSeriesData.length === 0) return [];
 
-      const reserved = (impByAdType['RESERVED']?.todayImp || 0) * factor / 24;
-      const programmatic = (impByAdType['PROGRAMMATIC']?.todayImp || 0) * factor / 24;
-      const house = (impByAdType['HOUSE']?.todayImp || 0) * factor / 24;
-
-      data.push({
-        time: `${hour}:00`,
-        予約型: Math.round(reserved),
-        運用型: Math.round(programmatic),
-        自社広告: Math.round(house),
-        全体: Math.round(reserved + programmatic + house),
-      });
-    }
-    return data;
-  }, [impByAdType]);
-
-  // 曜日別データのシミュレーション
-  const dailyData = useMemo(() => {
-    const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
-    const data = [];
-    
-    for (let day = 0; day < 7; day++) {
-      // 曜日による配信傾向をシミュレート
-      // 平日（月-金）: 高め、土日: 低め
-      const factor = day < 5 ? 1.2 : 0.7;
-
-      const reserved = (impByAdType['RESERVED']?.todayImp || 0) * factor;
-      const programmatic = (impByAdType['PROGRAMMATIC']?.todayImp || 0) * factor;
-      const house = (impByAdType['HOUSE']?.todayImp || 0) * factor;
-
-      data.push({
-        time: weekdays[day],
-        予約型: Math.round(reserved),
-        運用型: Math.round(programmatic),
-        自社広告: Math.round(house),
-        全体: Math.round(reserved + programmatic + house),
-      });
-    }
-    return data;
-  }, [impByAdType]);
-
-  // 表示するデータを決定
-  const chartData = analysisType === 'hourly' ? hourlyData : dailyData;
+    return timeSeriesData.map((point) => {
+      const date = new Date(point.timestamp);
+      return {
+        time: `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`,
+        timestamp: point.timestamp.getTime(),
+        予約型: point.reservedImp,
+        運用型: point.programmaticImp,
+        自社広告: point.houseImp,
+        全体: point.totalImp,
+      };
+    });
+  }, [timeSeriesData]);
 
   // 表示するラインを決定
   const getVisibleLines = () => {
@@ -139,34 +119,6 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
 
   return (
     <div className="space-y-6">
-      {/* 分析タイプ切り替え */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setAnalysisType('hourly')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                analysisType === 'hourly'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📊 時間帯別（0-23時）
-            </button>
-            <button
-              onClick={() => setAnalysisType('daily')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                analysisType === 'daily'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📅 曜日別
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* 広告種別タブ */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-wrap gap-2">
@@ -220,48 +172,72 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
       {/* グラフ */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          {analysisType === 'hourly' ? '時間帯別Imp推移' : '曜日別Imp推移'}
+          時系列Imp推移（過去90日間）
         </h3>
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-sm text-yellow-800">
-            ℹ️ このグラフは当日impデータを基に推定した傾向を表示しています。
-            実際の時系列データを蓄積することで、より正確な分析が可能になります。
-          </p>
-        </div>
-        {chartData.length === 0 ? (
-          <div className="h-96 flex items-center justify-center text-gray-500">
-            データがありません
+        {isLoading ? (
+          <div className="h-96 flex items-center justify-center">
+            <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="h-96 flex flex-col items-center justify-center text-gray-500">
+            <svg className="h-16 w-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            <p>時系列データがまだ蓄積されていません</p>
+            <p className="text-sm mt-2">データは毎時5分に自動的に保存されます</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="time"
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => formatNumber(value)}
-              />
-              <Tooltip
-                formatter={(value: any) => formatNumber(typeof value === 'number' ? value : 0)}
-                labelStyle={{ color: '#374151' }}
-              />
-              <Legend />
-              {getVisibleLines().map((line) => (
-                <Line
-                  key={line.dataKey}
-                  type="monotone"
-                  dataKey={line.dataKey}
-                  stroke={line.color}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
+          <>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                📊 {timeSeriesData.length}件のデータポイントを表示中（最大90日間保存）
+              </p>
+            </div>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="time"
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatNumber(value)}
+                />
+                <Tooltip
+                  formatter={(value: any) => formatNumber(typeof value === 'number' ? value : 0)}
+                  labelStyle={{ color: '#374151' }}
+                />
+                <Legend />
+                {getVisibleLines().map((line) => (
+                  <Line
+                    key={line.dataKey}
+                    type="monotone"
+                    dataKey={line.dataKey}
+                    stroke={line.color}
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </>
         )}
       </div>
     </div>

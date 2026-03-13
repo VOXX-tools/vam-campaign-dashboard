@@ -8,14 +8,14 @@
  * - useReducerとuseContextを使用したグローバル状態管理
  * - DataFetcherとの統合（自動データ取得）
  * - GoogleAuthContextからアクセストークンを取得
- * - LocalStorageManagerとの統合（データ永続化）
+ * - FirestoreManagerとの統合（データ永続化）
  */
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import type { AppState, AppAction, EnrichedCampaign, FetchResult } from '../types';
 import { DataFetcher } from '../modules/DataFetcher';
 import { StatusEvaluator } from '../modules/StatusEvaluator';
-import { LocalStorageManager } from '../modules/LocalStorageManager';
+import { FirestoreManager } from '../modules/FirestoreManager';
 import { useGoogleAuth } from './GoogleAuthContext';
 
 /**
@@ -122,15 +122,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
  * - useReducerで状態管理
  * - DataFetcherとの統合（自動データ取得）
  * - GoogleAuthContextからaccessTokenを取得
- * - LocalStorageManagerでデータ永続化
+ * - FirestoreManagerでデータ永続化
  */
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { accessToken, isAuthenticated } = useGoogleAuth();
   
-  // DataFetcherとLocalStorageManagerのインスタンス
+  // DataFetcherとFirestoreManagerのインスタンス
   const dataFetcherRef = React.useRef<DataFetcher | null>(null);
-  const storageManagerRef = React.useRef<LocalStorageManager>(new LocalStorageManager());
+  const storageManagerRef = React.useRef<FirestoreManager>(new FirestoreManager());
   const statusEvaluatorRef = React.useRef<StatusEvaluator>(new StatusEvaluator());
 
   /**
@@ -171,8 +171,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
         });
 
-        // LocalStorageに保存
-        storageManagerRef.current.save({
+        // Firestoreに保存
+        await storageManagerRef.current.save({
           campaigns: enrichedCampaigns,
           timestamp: result.timestamp,
         });
@@ -189,7 +189,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           .filter((c) => c.adType.type === 'HOUSE')
           .reduce((sum, c) => sum + c.todayImp, 0);
 
-        storageManagerRef.current.saveTimeSeries({
+        await storageManagerRef.current.saveTimeSeries({
           timestamp: result.timestamp,
           totalImp,
           reservedImp,
@@ -228,24 +228,32 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   /**
    * 初期化処理
-   * - LocalStorageからデータを読み込み
+   * - Firestoreからデータを読み込み
    * - 認証済みの場合は自動データ取得を開始
    */
   useEffect(() => {
-    // LocalStorageからデータを読み込み
-    const savedData = storageManagerRef.current.load();
-    if (savedData) {
-      dispatch({
-        type: 'FETCH_SUCCESS',
-        payload: {
-          campaigns: savedData.campaigns,
-          timestamp: savedData.timestamp,
-        },
-      });
-    }
+    // Firestoreからデータを読み込み
+    const loadInitialData = async () => {
+      try {
+        const savedData = await storageManagerRef.current.load();
+        if (savedData) {
+          dispatch({
+            type: 'FETCH_SUCCESS',
+            payload: {
+              campaigns: savedData.campaigns,
+              timestamp: savedData.timestamp,
+            },
+          });
+        }
 
-    // 古いデータをクリーンアップ（7日以上前）
-    storageManagerRef.current.cleanup();
+        // 古いデータをクリーンアップ（90日以上前）
+        await storageManagerRef.current.cleanup();
+      } catch (error) {
+        console.error('Failed to load initial data from Firestore:', error);
+      }
+    };
+
+    loadInitialData();
   }, []);
 
   /**
@@ -268,7 +276,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       dataFetcherRef.current = new DataFetcher();
     }
 
-    dataFetcherRef.current.startAutoFetch(accessToken, (result: FetchResult) => {
+    dataFetcherRef.current.startAutoFetch(accessToken, async (result: FetchResult) => {
       if (result.success) {
         // ステータス評価を実行してEnrichedCampaignに変換
         const enrichedCampaigns: EnrichedCampaign[] = result.data.map((campaign) => {
@@ -289,8 +297,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           };
         });
 
-        // LocalStorageに保存
-        storageManagerRef.current.save({
+        // Firestoreに保存
+        await storageManagerRef.current.save({
           campaigns: enrichedCampaigns,
           timestamp: result.timestamp,
         });
@@ -307,7 +315,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           .filter((c) => c.adType.type === 'HOUSE')
           .reduce((sum, c) => sum + c.todayImp, 0);
 
-        storageManagerRef.current.saveTimeSeries({
+        await storageManagerRef.current.saveTimeSeries({
           timestamp: result.timestamp,
           totalImp,
           reservedImp,
