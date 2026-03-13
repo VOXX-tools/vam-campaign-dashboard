@@ -12,16 +12,17 @@
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import type { EnrichedCampaign } from '../types';
 import { StatusBadge } from './StatusBadge';
 
 interface CampaignDetailProps {
   campaign: EnrichedCampaign;
-  onBack: () => void;
 }
 
-export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack }) => {
+export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign }) => {
+  const navigate = useNavigate();
   const formatNumber = (num: number): string => {
     // 数値をカンマ区切りで表示
     return num.toLocaleString('ja-JP');
@@ -55,7 +56,7 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack
       {/* ヘッダー */}
       <div className="bg-white rounded-lg shadow p-6">
         <button
-          onClick={onBack}
+          onClick={() => navigate('/')}
           className="flex items-center text-blue-600 hover:text-blue-800 mb-4 transition-colors"
         >
           <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -63,6 +64,22 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack
           </svg>
           一覧に戻る
         </button>
+        
+        {/* キャンペーンURL - 最上部に移動 */}
+        {campaign.CAMPAIGN_URL && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-sm font-medium text-blue-900 mb-1">キャンペーンURL</div>
+            <a
+              href={campaign.CAMPAIGN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline break-all text-sm"
+            >
+              {campaign.CAMPAIGN_URL}
+            </a>
+          </div>
+        )}
+        
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">{campaign.CAMPAIGN_NAME}</h2>
@@ -234,20 +251,7 @@ export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack
         </div>
       </div>
 
-      {/* キャンペーンURL */}
-      {campaign.CAMPAIGN_URL && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">キャンペーンURL</h3>
-          <a
-            href={campaign.CAMPAIGN_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:text-blue-800 underline break-all"
-          >
-            {campaign.CAMPAIGN_URL}
-          </a>
-        </div>
-      )}
+      {/* キャンペーンURL - 削除（最上部に移動済み） */}
     </div>
   );
 };

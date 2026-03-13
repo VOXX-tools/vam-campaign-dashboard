@@ -1,7 +1,10 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleAuthProvider, useGoogleAuth } from './context/GoogleAuthContext';
 import { AppContextProvider } from './context/AppContext';
 import { LoginButton } from './components/LoginButton';
 import { Dashboard } from './components/Dashboard';
+import { CampaignDetail } from './components/CampaignDetail';
+import { useAppContext } from './context/AppContext';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useGoogleAuth();
@@ -37,17 +40,36 @@ function AppContent() {
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <Dashboard />
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/campaign/:campaignId" element={<CampaignDetailRoute />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   );
+}
+
+function CampaignDetailRoute() {
+  const { state } = useAppContext();
+  const campaignId = window.location.pathname.split('/').pop();
+  
+  const campaign = state.campaigns.find(c => c.CAMPAIGN_ID === campaignId);
+  
+  if (!campaign) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <CampaignDetail campaign={campaign} />;
 }
 
 function App() {
   return (
     <GoogleAuthProvider>
       <AppContextProvider>
-        <AppContent />
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
       </AppContextProvider>
     </GoogleAuthProvider>
   );

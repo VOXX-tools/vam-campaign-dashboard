@@ -11,13 +11,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { AgencyAnalyzer } from '../modules/AgencyAnalyzer';
 import { CampaignList } from './CampaignList';
 import { TimeSeriesView } from './TimeSeriesView';
 import { AgencyView } from './AgencyView';
 import { PriorityView } from './PriorityView';
-import { CampaignDetail } from './CampaignDetail';
 import { ErrorBanner } from './ErrorBanner';
 import type { EnrichedCampaign } from '../types';
 
@@ -25,8 +25,8 @@ type TabType = 'list' | 'timeSeries' | 'agency' | 'priority';
 
 export const Dashboard: React.FC = () => {
   const { state, refetch } = useAppContext();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('list');
-  const [selectedCampaign, setSelectedCampaign] = useState<EnrichedCampaign | null>(null);
 
   // 代理店別分析を実行
   const agencySummaries = useMemo(() => {
@@ -35,11 +35,7 @@ export const Dashboard: React.FC = () => {
   }, [state.campaigns]);
 
   const handleCampaignClick = (campaign: EnrichedCampaign) => {
-    setSelectedCampaign(campaign);
-  };
-
-  const handleBackToList = () => {
-    setSelectedCampaign(null);
+    navigate(`/campaign/${campaign.CAMPAIGN_ID}`);
   };
 
   const formatLastFetchTime = (date: Date | null): string => {
@@ -54,15 +50,6 @@ export const Dashboard: React.FC = () => {
     { id: 'agency' as TabType, label: '代理店別分析', icon: '🏢' },
     { id: 'priority' as TabType, label: '優先度別分析', icon: '🎯' },
   ];
-
-  // キャンペーン詳細表示中は詳細ビューを表示
-  if (selectedCampaign) {
-    return (
-      <div className="space-y-6">
-        <CampaignDetail campaign={selectedCampaign} onBack={handleBackToList} />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
