@@ -82,22 +82,28 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
     const endDate = new Date(dateRange.end);
     endDate.setHours(23, 59, 59, 999); // 終了日の最後まで含める
 
-    return timeSeriesData
-      .filter((point) => {
-        const pointDate = new Date(point.timestamp);
-        return pointDate >= startDate && pointDate <= endDate;
-      })
-      .map((point) => {
-        const date = new Date(point.timestamp);
-        return {
-          time: `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`,
-          timestamp: point.timestamp.getTime(),
-          予約型: point.reservedImp,
-          運用型: point.programmaticImp,
-          自社広告: point.houseImp,
-          全体: point.totalImp,
-        };
-      });
+    const filtered = timeSeriesData.filter((point) => {
+      const pointDate = new Date(point.timestamp);
+      return pointDate >= startDate && pointDate <= endDate;
+    });
+
+    console.log('TimeSeriesView - Filtered data points:', filtered.length);
+    if (filtered.length > 0) {
+      console.log('TimeSeriesView - Sample data point:', filtered[0]);
+    }
+
+    return filtered.map((point) => {
+      const date = new Date(point.timestamp);
+      const dataPoint = {
+        time: `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`,
+        timestamp: point.timestamp.getTime(),
+        予約型: point.reservedImp || 0,
+        運用型: point.programmaticImp || 0,
+        自社広告: point.houseImp || 0,
+        全体: point.totalImp || 0,
+      };
+      return dataPoint;
+    });
   }, [timeSeriesData, dateRange]);
 
   // 表示するラインを決定
