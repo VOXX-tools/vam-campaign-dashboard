@@ -392,8 +392,9 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
                     dataKey={`優先度${item.priority}`}
                     stroke={priorityColors[item.priority] || '#6b7280'}
                     strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                    connectNulls={true}
                   />
                 ))}
               </LineChart>

@@ -307,8 +307,9 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
                     dataKey={line.dataKey}
                     stroke={line.color}
                     strokeWidth={2}
-                    dot={false}
+                    dot={{ r: 3 }}
                     activeDot={{ r: 5 }}
+                    connectNulls={true}
                   />
                 ))}
               </LineChart>
