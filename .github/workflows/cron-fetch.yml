@@ -1,0 +1,32 @@
+name: Fetch Campaign Data
+
+on:
+  schedule:
+    # 毎時5分に実行（UTC時間）
+    # 日本時間の毎時5分 = UTC時間の前時56分
+    # 例: 日本時間 9:05 = UTC 0:05
+    - cron: '5 * * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Vercel API to fetch and save data
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST https://vam-campaign-dashboard.vercel.app/api/cron-fetch \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+          
+          if [ "$http_code" != "200" ]; then
+            echo "Error: API call failed with status $http_code"
+            exit 1
+          fi
+          
+          echo "✅ Data fetched and saved successfully"
