@@ -27,8 +27,8 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0],
+    start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 昨日
+    end: new Date().toISOString().split('T')[0], // 今日
   });
 
   const storageManagerRef = React.useRef<FirestoreManager>(new FirestoreManager());
