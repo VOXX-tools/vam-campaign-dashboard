@@ -268,10 +268,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return;
     }
 
-    // 初回データ取得
-    fetchData();
+    // 初回データ取得はスキップ（Firestoreから読み込み済み）
+    // fetchData(); // ← コメントアウト
 
-    // 自動データ取得を開始
+    // 自動データ取得を開始（初回実行なし）
     if (!dataFetcherRef.current) {
       dataFetcherRef.current = new DataFetcher();
     }
