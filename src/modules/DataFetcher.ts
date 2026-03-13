@@ -163,11 +163,16 @@ export class DataFetcher {
       );
     }
 
-    // 数値フィールドのパース
+    // 数値フィールドのパース（エラー値を0として扱う）
     const parseNumber = (value: any, fieldName: string): number => {
+      // エラー値（#DIV/0!、#VALUE!、#N/A など）や空文字列の場合は0を返す
+      if (!value || typeof value === 'string' && value.startsWith('#')) {
+        return 0;
+      }
       const num = typeof value === 'number' ? value : parseFloat(value);
       if (isNaN(num)) {
-        throw new DataFormatError(`行 ${rowNumber}: ${fieldName}が数値ではありません`);
+        // パースできない場合も0を返す（エラーでスキップしない）
+        return 0;
       }
       return num;
     };
