@@ -177,6 +177,26 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           timestamp: result.timestamp,
         });
 
+        // 時系列データポイントを保存
+        const totalImp = enrichedCampaigns.reduce((sum, c) => sum + c.todayImp, 0);
+        const reservedImp = enrichedCampaigns
+          .filter((c) => c.adType.type === 'RESERVED')
+          .reduce((sum, c) => sum + c.todayImp, 0);
+        const programmaticImp = enrichedCampaigns
+          .filter((c) => c.adType.type === 'PROGRAMMATIC')
+          .reduce((sum, c) => sum + c.todayImp, 0);
+        const houseImp = enrichedCampaigns
+          .filter((c) => c.adType.type === 'HOUSE')
+          .reduce((sum, c) => sum + c.todayImp, 0);
+
+        storageManagerRef.current.saveTimeSeries({
+          timestamp: result.timestamp,
+          totalImp,
+          reservedImp,
+          programmaticImp,
+          houseImp,
+        });
+
         // 状態を更新
         dispatch({
           type: 'FETCH_SUCCESS',
@@ -273,6 +293,26 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         storageManagerRef.current.save({
           campaigns: enrichedCampaigns,
           timestamp: result.timestamp,
+        });
+
+        // 時系列データポイントを保存
+        const totalImp = enrichedCampaigns.reduce((sum, c) => sum + c.todayImp, 0);
+        const reservedImp = enrichedCampaigns
+          .filter((c) => c.adType.type === 'RESERVED')
+          .reduce((sum, c) => sum + c.todayImp, 0);
+        const programmaticImp = enrichedCampaigns
+          .filter((c) => c.adType.type === 'PROGRAMMATIC')
+          .reduce((sum, c) => sum + c.todayImp, 0);
+        const houseImp = enrichedCampaigns
+          .filter((c) => c.adType.type === 'HOUSE')
+          .reduce((sum, c) => sum + c.todayImp, 0);
+
+        storageManagerRef.current.saveTimeSeries({
+          timestamp: result.timestamp,
+          totalImp,
+          reservedImp,
+          programmaticImp,
+          houseImp,
         });
 
         // 状態を更新
