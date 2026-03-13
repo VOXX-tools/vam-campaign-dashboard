@@ -164,7 +164,7 @@ export class DataFetcher {
     }
 
     // 数値フィールドのパース（エラー値を0として扱う）
-    const parseNumber = (value: any, fieldName: string): number => {
+    const parseNumber = (value: any): number => {
       // エラー値（#DIV/0!、#VALUE!、#N/A など）や空文字列の場合は0を返す
       if (!value || typeof value === 'string' && value.startsWith('#')) {
         return 0;
@@ -184,20 +184,20 @@ export class DataFetcher {
       AGENCY_NAME: String(row[3] || ''),
       CAMPAIGN_ID: String(row[4] || ''),
       CAMPAIGN_NAME: String(row[5] || ''),
-      priority: parseNumber(row[6], '優先度'),
+      priority: parseNumber(row[6]),
       START_TIME: String(row[7] || ''),
       END_TIME: String(row[8] || ''),
-      deliveryDays: parseNumber(row[9], '配信日数'),
-      targetImp: parseNumber(row[10], '目標Imp'),
-      cumulativeImp: parseNumber(row[11], '累積実績Imp'),
-      dailyImp: parseNumber(row[12], '日割りImp'),
-      deliveryCap: parseNumber(row[13], '配信キャップ'),
-      todayImp: parseNumber(row[14], '当日Imp'),
-      totalHours: parseNumber(row[15], '全体時間'),
-      elapsedHours: parseNumber(row[16], '経過時間'),
-      timeProgressRate: parseNumber(row[17], '時間進捗率'),
-      impProgress: parseNumber(row[18], 'imp進捗'),
-      progressRate: parseNumber(row[19], '進捗率'),
+      deliveryDays: parseNumber(row[9]),
+      targetImp: parseNumber(row[10]),
+      cumulativeImp: parseNumber(row[11]),
+      dailyImp: parseNumber(row[12]),
+      deliveryCap: parseNumber(row[13]),
+      todayImp: parseNumber(row[14]),
+      totalHours: parseNumber(row[15]),
+      elapsedHours: parseNumber(row[16]),
+      timeProgressRate: parseNumber(row[17]),
+      impProgress: parseNumber(row[18]),
+      progressRate: parseNumber(row[19]),
     };
   }
 
