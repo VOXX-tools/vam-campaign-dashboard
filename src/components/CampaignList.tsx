@@ -93,8 +93,8 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
   };
 
   const formatNumber = (num: number): string => {
-    // 数値をそのまま表示（カンマ区切りなし）
-    return String(num);
+    // 数値をカンマ区切りで表示
+    return num.toLocaleString('ja-JP');
   };
 
   const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
@@ -144,9 +144,6 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8">
-                  優先度
-                </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('name')}
@@ -173,6 +170,9 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '180px' }}>
                   ステータス
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '80px' }}>
+                  優先度
+                </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('progressRate')}
@@ -183,10 +183,10 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
                     <SortIcon field="progressRate" />
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '100px' }}>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '120px' }}>
                   当日Imp
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '100px' }}>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ minWidth: '120px' }}>
                   累積Imp
                 </th>
               </tr>
@@ -205,9 +205,6 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
                     onClick={() => onCampaignClick(campaign)}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                      {campaign.priority}
-                    </td>
                     <td className="px-4 py-4" style={{ maxWidth: '300px' }}>
                       <div className="text-sm font-medium text-gray-900 truncate" title={campaign.CAMPAIGN_NAME}>
                         {campaign.CAMPAIGN_NAME}
@@ -228,6 +225,9 @@ export const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaig
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <StatusBadge status={campaign.status} />
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {campaign.priority}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {campaign.progressRate.toFixed(1)}%

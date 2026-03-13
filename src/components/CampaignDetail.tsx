@@ -23,8 +23,8 @@ interface CampaignDetailProps {
 
 export const CampaignDetail: React.FC<CampaignDetailProps> = ({ campaign, onBack }) => {
   const formatNumber = (num: number): string => {
-    // 数値をそのまま表示（カンマ区切りなし）
-    return String(num);
+    // 数値をカンマ区切りで表示
+    return num.toLocaleString('ja-JP');
   };
 
   const formatDate = (dateStr: string): string => {

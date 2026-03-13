@@ -17,11 +17,12 @@ import { AgencyAnalyzer } from '../modules/AgencyAnalyzer';
 import { CampaignList } from './CampaignList';
 import { TimeSeriesView } from './TimeSeriesView';
 import { AgencyView } from './AgencyView';
+import { PriorityView } from './PriorityView';
 import { CampaignDetail } from './CampaignDetail';
 import { ErrorBanner } from './ErrorBanner';
 import type { EnrichedCampaign } from '../types';
 
-type TabType = 'list' | 'timeSeries' | 'agency';
+type TabType = 'list' | 'timeSeries' | 'agency' | 'priority';
 
 export const Dashboard: React.FC = () => {
   const { state, refetch } = useAppContext();
@@ -62,6 +63,7 @@ export const Dashboard: React.FC = () => {
     { id: 'list' as TabType, label: 'キャンペーン一覧', icon: '📋' },
     { id: 'timeSeries' as TabType, label: '時系列分析', icon: '📈' },
     { id: 'agency' as TabType, label: '代理店別分析', icon: '🏢' },
+    { id: 'priority' as TabType, label: '優先度別分析', icon: '🎯' },
   ];
 
   // キャンペーン詳細表示中は詳細ビューを表示
@@ -204,6 +206,7 @@ export const Dashboard: React.FC = () => {
             )}
             {activeTab === 'timeSeries' && <TimeSeriesView analysis={timeSeriesAnalysis} />}
             {activeTab === 'agency' && <AgencyView summaries={agencySummaries} />}
+            {activeTab === 'priority' && <PriorityView campaigns={state.campaigns} />}
           </>
         )}
       </div>
