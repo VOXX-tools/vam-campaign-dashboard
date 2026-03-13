@@ -3,20 +3,30 @@
  * 
  * 機能:
  * - 優先度別のimp推移を時間別に表示
+ * - 時間帯別（0-23時）または曜日別の切り替え
  * - 各優先度のキャンペーン一覧を表示
  * - 営業チームと技術チームが次の対応に繋げやすくする
  */
 
 import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { EnrichedCampaign } from '../types';
 
 interface PriorityViewProps {
   campaigns: EnrichedCampaign[];
 }
 
+type AnalysisType = 'hourly' | 'daily';
+type ChartType = 'line' | 'bar';
+
 export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
   const [selectedPriority, setSelectedPriority] = useState<number | null>(null);
+  const [analysisType, setAnalysisType] = useState<AnalysisType>('hourly');
+  const [chartType, setChartType] = useState<ChartType>('line');
+
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('ja-JP');
+  };
 
   // 優先度別の集計
   const prioritySummary = useMemo(() => {
@@ -50,17 +60,66 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
     return Object.values(summary).sort((a, b) => a.priority - b.priority);
   }, [campaigns]);
 
-  // グラフ用データ
-  const chartData = prioritySummary.map((item) => ({
-    priority: `優先度 ${item.priority}`,
-    当日Imp: item.todayImp,
-    累積Imp: item.cumulativeImp,
-    目標Imp: item.totalImp,
-  }));
-
-  const formatNumber = (num: number): string => {
-    return num.toLocaleString('ja-JP');
+  // 優先度ごとの色を定義
+  const priorityColors: Record<number, string> = {
+    0: '#ef4444', // 赤
+    1: '#f59e0b', // オレンジ
+    2: '#10b981', // 緑
+    3: '#3b82f6', // 青
+    4: '#8b5cf6', // 紫
+    5: '#ec4899', // ピンク
   };
+
+  // 時間帯別データ（0-23時）
+  const hourlyData = useMemo(() => {
+    const data = [];
+    
+    for (let hour = 0; hour < 24; hour++) {
+      // 時間帯による配信傾向をシミュレート
+      let factor = 1.0;
+      if (hour >= 0 && hour < 6) factor = 0.3;
+      else if (hour >= 9 && hour < 17) factor = 1.5;
+      else if (hour >= 18 && hour < 24) factor = 1.2;
+      else factor = 0.8;
+
+      const dataPoint: any = {
+        time: `${hour}:00`,
+      };
+
+      prioritySummary.forEach((item) => {
+        const impValue = (item.todayImp * factor) / 24;
+        dataPoint[`優先度${item.priority}`] = Math.round(impValue);
+      });
+
+      data.push(dataPoint);
+    }
+    return data;
+  }, [prioritySummary]);
+
+  // 曜日別データ
+  const dailyData = useMemo(() => {
+    const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
+    const data = [];
+    
+    for (let day = 0; day < 7; day++) {
+      // 曜日による配信傾向をシミュレート
+      const factor = day < 5 ? 1.2 : 0.7;
+
+      const dataPoint: any = {
+        time: weekdays[day],
+      };
+
+      prioritySummary.forEach((item) => {
+        const impValue = item.todayImp * factor;
+        dataPoint[`優先度${item.priority}`] = Math.round(impValue);
+      });
+
+      data.push(dataPoint);
+    }
+    return data;
+  }, [prioritySummary]);
+
+  const chartData = analysisType === 'hourly' ? hourlyData : dailyData;
 
   const selectedPriorityData = selectedPriority !== null
     ? prioritySummary.find((item) => item.priority === selectedPriority)
@@ -68,6 +127,56 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
 
   return (
     <div className="space-y-6">
+      {/* 分析タイプとグラフタイプの切り替え */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setAnalysisType('hourly')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                analysisType === 'hourly'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📊 時間帯別（0-23時）
+            </button>
+            <button
+              onClick={() => setAnalysisType('daily')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                analysisType === 'daily'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📅 曜日別
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setChartType('line')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                chartType === 'line'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📈 折れ線グラフ
+            </button>
+            <button
+              onClick={() => setChartType('bar')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                chartType === 'bar'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📊 棒グラフ
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* サマリーカード */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {prioritySummary.map((item) => (
@@ -91,10 +200,6 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
                 <span className="text-gray-600">累積Imp:</span>
                 <span className="font-medium text-gray-900">{formatNumber(item.cumulativeImp)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">目標Imp:</span>
-                <span className="font-medium text-gray-900">{formatNumber(item.totalImp)}</span>
-              </div>
             </div>
           </div>
         ))}
@@ -102,19 +207,59 @@ export const PriorityView: React.FC<PriorityViewProps> = ({ campaigns }) => {
 
       {/* グラフ */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">優先度別Imp推移</h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="priority" />
-            <YAxis tickFormatter={(value: number) => formatNumber(value)} />
-            <Tooltip formatter={(value: any) => formatNumber(Number(value))} />
-            <Legend />
-            <Bar dataKey="当日Imp" fill="#fbbf24" />
-            <Bar dataKey="累積Imp" fill="#10b981" />
-            <Bar dataKey="目標Imp" fill="#3b82f6" />
-          </BarChart>
-        </ResponsiveContainer>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          優先度別 {analysisType === 'hourly' ? '時間帯別' : '曜日別'} Imp推移
+        </h3>
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            ℹ️ このグラフは当日impデータを基に推定した傾向を表示しています。
+            実際の時系列データを蓄積することで、より正確な分析が可能になります。
+          </p>
+        </div>
+        {chartData.length === 0 ? (
+          <div className="h-96 flex items-center justify-center text-gray-500">
+            データがありません
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={400}>
+            {chartType === 'line' ? (
+              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => formatNumber(value)} />
+                <Tooltip formatter={(value: any) => formatNumber(typeof value === 'number' ? value : 0)} />
+                <Legend />
+                {prioritySummary.map((item) => (
+                  <Line
+                    key={item.priority}
+                    type="monotone"
+                    dataKey={`優先度${item.priority}`}
+                    stroke={priorityColors[item.priority] || '#6b7280'}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                ))}
+              </LineChart>
+            ) : (
+              <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => formatNumber(value)} />
+                <Tooltip formatter={(value: any) => formatNumber(typeof value === 'number' ? value : 0)} />
+                <Legend />
+                {prioritySummary.map((item) => (
+                  <Bar
+                    key={item.priority}
+                    dataKey={`優先度${item.priority}`}
+                    fill={priorityColors[item.priority] || '#6b7280'}
+                    stackId="a"
+                  />
+                ))}
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* 選択された優先度のキャンペーン一覧 */}
