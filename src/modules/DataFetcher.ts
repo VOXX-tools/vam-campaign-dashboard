@@ -223,7 +223,7 @@ export class DataFetcher {
 
   /**
    * 自動更新を開始
-   * 初回は即座に実行し、その後は毎時5分に実行
+   * 毎時5分に実行（初回実行はスキップ）
    * 
    * @param accessToken - OAuth 2.0アクセストークン
    * @param callback - データ取得後に呼び出されるコールバック関数
@@ -232,8 +232,8 @@ export class DataFetcher {
     // 既存のスケジューラーを停止
     this.stopAutoFetch();
 
-    // 初回実行
-    this.fetch(accessToken).then(callback);
+    // 初回実行はスキップ（Firestoreから読み込み済み）
+    // this.fetch(accessToken).then(callback);
 
     // 次回の毎時5分までの時間を計算
     const scheduleNextFetch = () => {
