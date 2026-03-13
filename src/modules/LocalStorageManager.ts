@@ -11,7 +11,7 @@ import type { StorageData, TimeSeriesDataPoint } from '../types';
 
 const STORAGE_KEY_CAMPAIGNS = 'vam_dashboard_campaigns';
 const STORAGE_KEY_TIMESERIES = 'vam_dashboard_timeseries';
-const DATA_RETENTION_DAYS = 7;
+const DATA_RETENTION_DAYS = 90; // 約3ヶ月分のデータを保存
 
 export class LocalStorageManager {
   /**
@@ -102,7 +102,7 @@ export class LocalStorageManager {
   }
 
   /**
-   * 7日以上前のデータを削除
+   * 90日以上前のデータを削除
    * Requirements: 12.2, 12.3
    */
   cleanup(): void {

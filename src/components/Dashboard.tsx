@@ -12,7 +12,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { TimeSeriesAnalyzer } from '../modules/TimeSeriesAnalyzer';
 import { AgencyAnalyzer } from '../modules/AgencyAnalyzer';
 import { CampaignList } from './CampaignList';
 import { TimeSeriesView } from './TimeSeriesView';
@@ -28,16 +27,6 @@ export const Dashboard: React.FC = () => {
   const { state, refetch } = useAppContext();
   const [activeTab, setActiveTab] = useState<TabType>('list');
   const [selectedCampaign, setSelectedCampaign] = useState<EnrichedCampaign | null>(null);
-
-  // 時系列分析を実行
-  const timeSeriesAnalysis = useMemo(() => {
-    const analyzer = new TimeSeriesAnalyzer();
-    // 現在のデータを時系列データポイントとして追加
-    if (state.campaigns.length > 0 && state.lastFetchTime) {
-      analyzer.addDataPoint(state.campaigns, state.lastFetchTime);
-    }
-    return analyzer.analyze();
-  }, [state.campaigns, state.lastFetchTime]);
 
   // 代理店別分析を実行
   const agencySummaries = useMemo(() => {
@@ -204,7 +193,7 @@ export const Dashboard: React.FC = () => {
             {activeTab === 'list' && (
               <CampaignList campaigns={state.campaigns} onCampaignClick={handleCampaignClick} />
             )}
-            {activeTab === 'timeSeries' && <TimeSeriesView analysis={timeSeriesAnalysis} />}
+            {activeTab === 'timeSeries' && <TimeSeriesView campaigns={state.campaigns} />}
             {activeTab === 'agency' && <AgencyView summaries={agencySummaries} />}
             {activeTab === 'priority' && <PriorityView campaigns={state.campaigns} />}
           </>
