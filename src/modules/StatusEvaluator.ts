@@ -51,15 +51,26 @@ export class StatusEvaluator {
    * キャンペーンのステータスを判定します
    * 
    * 判定順序（Requirement 3.6, 4.3）:
-   * 1. 自社広告と運用型は常に「対象外」を返す
-   * 2. 予約型のみ要対応条件を上から順に評価（3.1→3.2→3.3→3.4→3.5）
-   * 3. 次に注意条件を評価（4.1→4.2）
-   * 4. どれにも該当しない → 順調
+   * 1. 目標impが0の場合は「無し」を返す
+   * 2. 自社広告と運用型は常に「対象外」を返す
+   * 3. 予約型のみ要対応条件を上から順に評価（3.1→3.2→3.3→3.4→3.5）
+   * 4. 次に注意条件を評価（4.1→4.2）
+   * 5. どれにも該当しない → 順調
    * 
    * @param campaign - キャンペーンデータ
    * @returns キャンペーンステータス
    */
   evaluateStatus(campaign: CampaignData): CampaignStatus {
+    // 目標impが0の場合はステータス判定対象外（無し）
+    if (campaign.targetImp === 0) {
+      return {
+        type: 'NOT_APPLICABLE',
+        label: '-',
+        color: 'gray',
+        icon: '',
+      };
+    }
+
     // 広告種別を判定
     const adType = this.evaluateAdType(campaign.ORDER_NAME);
     

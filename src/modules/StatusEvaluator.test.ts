@@ -86,6 +86,20 @@ describe('StatusEvaluator', () => {
   });
 
   describe('evaluateStatus', () => {
+    // 目標impが0の場合はステータス判定対象外
+    it('should mark as NOT_APPLICABLE when targetImp is 0', () => {
+      const campaign = createMockCampaign({
+        targetImp: 0,
+        cumulativeImp: 0,
+        progressRate: 0,
+        todayImp: 0,
+      });
+      const result = evaluator.evaluateStatus(campaign);
+      expect(result.type).toBe('NOT_APPLICABLE');
+      expect(result.label).toBe('-');
+      expect(result.color).toBe('gray');
+    });
+
     // Requirement 3.1: ビハインド80%未満
     it('should mark as CRITICAL_BEHIND_80 when elapsed >= 24h and progress <= 80%', () => {
       const campaign = createMockCampaign({
