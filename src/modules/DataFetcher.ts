@@ -163,15 +163,35 @@ export class DataFetcher {
       );
     }
 
+    // デバッグ用: 最初の数行のデータをログ出力
+    if (rowNumber <= 5) {
+      console.log(`Row ${rowNumber} raw data:`, {
+        todayImp: row[14],
+        cumulativeImp: row[11],
+        targetImp: row[10],
+      });
+    }
+
     // 数値フィールドのパース（エラー値を0として扱う）
     const parseNumber = (value: any): number => {
       // エラー値（#DIV/0!、#VALUE!、#N/A など）や空文字列の場合は0を返す
       if (!value || typeof value === 'string' && value.startsWith('#')) {
         return 0;
       }
+      
+      // 文字列の場合、カンマを削除してから数値に変換
+      if (typeof value === 'string') {
+        const cleanedValue = value.replace(/,/g, '');
+        const num = parseFloat(cleanedValue);
+        if (isNaN(num)) {
+          return 0;
+        }
+        return num;
+      }
+      
+      // 数値の場合はそのまま返す
       const num = typeof value === 'number' ? value : parseFloat(value);
       if (isNaN(num)) {
-        // パースできない場合も0を返す（エラーでスキップしない）
         return 0;
       }
       return num;
