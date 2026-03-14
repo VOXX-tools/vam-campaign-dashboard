@@ -1,10 +1,11 @@
 name: Fetch Campaign Data
 
 on:
-  # スケジュール実行は一時的に無効化（サービスアカウント設定完了後に有効化）
-  # schedule:
-  #   - cron: '5 * * * *'
-  workflow_dispatch:  # 手動実行のみ
+  schedule:
+    # 毎時5分に実行（UTC時間）
+    # 日本時間の毎時5分 = UTC 前時56分
+    - cron: '56 * * * *'
+  workflow_dispatch:  # 手動実行も可能
 
 jobs:
   fetch:
