@@ -20,6 +20,7 @@ const serviceAccount = JSON.parse(
 
 initializeApp({
   credential: cert(serviceAccount),
+  projectId: 'vam-campaign-dashboard-66377',
 });
 
 const db = getFirestore();
