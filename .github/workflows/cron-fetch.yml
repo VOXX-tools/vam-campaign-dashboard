@@ -2,8 +2,7 @@ name: Fetch Campaign Data
 
 on:
   schedule:
-    # 毎時5分に実行（UTC時間）
-    # 日本時間の毎時5分 = UTC 前時56分
+    # 毎時56分に実行（UTC）= 日本時間の毎時5分
     - cron: '56 * * * *'
   workflow_dispatch:  # 手動実行も可能
 
@@ -11,21 +10,22 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Vercel API to fetch and save data
-        run: |
-          response=$(curl -s -w "\n%{http_code}" -X POST https://vam-campaign-dashboard.vercel.app/api/cron-fetch \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json")
-          
-          http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-          
-          echo "HTTP Status: $http_code"
-          echo "Response: $body"
-          
-          if [ "$http_code" != "200" ]; then
-            echo "Error: API call failed with status $http_code"
-            exit 1
-          fi
-          
-          echo "✅ Data fetched and saved successfully"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch and save campaign data
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          VITE_SPREADSHEET_ID: "1IwAuWxaQq2joBxNsGyCMnlvLN29ADqconyqXWoSepmA"
+          VITE_SHEET_NAME: "進捗率タブ"
+          FIREBASE_PROJECT_ID: "vam-campaign-dashboard-66377"
+        run: node scripts/fetch-and-save.mjs
