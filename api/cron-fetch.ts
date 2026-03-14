@@ -57,6 +57,11 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // GETとPOSTの両方を受け付ける
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   // 認証チェック
   const authHeader = req.headers.authorization;
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
