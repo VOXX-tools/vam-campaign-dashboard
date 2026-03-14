@@ -14,13 +14,29 @@ if (!serviceAccountKey) {
   process.exit(1);
 }
 
-const serviceAccount = JSON.parse(
-  Buffer.from(serviceAccountKey, 'base64').toString('utf-8')
-);
+let serviceAccount;
+try {
+  // Base64デコードを試みる
+  const decoded = Buffer.from(serviceAccountKey, 'base64').toString('utf-8');
+  serviceAccount = JSON.parse(decoded);
+  console.log('Service account loaded (base64 decoded)');
+} catch (e) {
+  // Base64でない場合はそのままJSONとしてパース
+  try {
+    serviceAccount = JSON.parse(serviceAccountKey);
+    console.log('Service account loaded (raw JSON)');
+  } catch (e2) {
+    console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY:', e2.message);
+    process.exit(1);
+  }
+}
+
+console.log('Service account email:', serviceAccount.client_email);
+console.log('Service account project_id:', serviceAccount.project_id);
 
 initializeApp({
   credential: cert(serviceAccount),
-  projectId: 'vam-campaign-dashboard-66377',
+  projectId: serviceAccount.project_id || 'vam-campaign-dashboard-66377',
 });
 
 const db = getFirestore();
@@ -134,6 +150,9 @@ async function main() {
   });
 
   const timestamp = new Date();
+
+  // Firestoreへの接続確認
+  console.log('Connecting to Firestore project:', db.projectId || 'unknown');
 
   // Firestoreにキャンペーンデータを保存
   await db.collection('campaigns').doc('latest').set({
