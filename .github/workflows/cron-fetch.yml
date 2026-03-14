@@ -27,5 +27,5 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
           VITE_SPREADSHEET_ID: "1IwAuWxaQq2joBxNsGyCMnlvLN29ADqconyqXWoSepmA"
           VITE_SHEET_NAME: "進捗率タブ"
-          FIREBASE_PROJECT_ID: "vam-campaign-dashboard-66377"
+          FIREBASE_PROJECT_ID: "vam-campaign-dashboard"
         run: node scripts/fetch-and-save.mjs
