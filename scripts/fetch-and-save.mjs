@@ -36,7 +36,7 @@ console.log('Service account project_id:', serviceAccount.project_id);
 
 initializeApp({
   credential: cert(serviceAccount),
-  projectId: serviceAccount.project_id || 'vam-campaign-dashboard',
+  projectId: 'vam-campaign-dashboard-66377',
 });
 
 const db = getFirestore();
