@@ -87,11 +87,6 @@ export const TimeSeriesView: React.FC<TimeSeriesViewProps> = ({ campaigns }) => 
       return pointDate >= startDate && pointDate <= endDate;
     });
 
-    console.log('TimeSeriesView - Filtered data points:', filtered.length);
-    if (filtered.length > 0) {
-      console.log('TimeSeriesView - Sample data point:', filtered[0]);
-    }
-
     return filtered.map((point) => {
       const date = new Date(point.timestamp);
       const dataPoint = {

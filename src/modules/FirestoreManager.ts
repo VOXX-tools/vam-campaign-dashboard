@@ -138,7 +138,6 @@ export class FirestoreManager {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        console.log('FirestoreManager - Raw document data:', data);
         dataPoints.push({
           timestamp: data.timestamp.toDate(),
           totalImp: data.totalImp || 0,
@@ -147,11 +146,6 @@ export class FirestoreManager {
           houseImp: data.houseImp || 0,
         });
       });
-
-      console.log('FirestoreManager - Loaded data points:', dataPoints.length);
-      if (dataPoints.length > 0) {
-        console.log('FirestoreManager - Sample data point:', dataPoints[0]);
-      }
 
       // 時系列順にソート（古い順）
       return dataPoints.reverse();
